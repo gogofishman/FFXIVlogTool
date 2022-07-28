@@ -56,8 +56,11 @@
        <x>210</x>
        <y>30</y>
        <width>691</width>
-       <height>281</height>
+       <height>236</height>
       </rect>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
      </property>
      <attribute name="horizontalHeaderCascadingSectionResizes">
       <bool>false</bool>
@@ -115,7 +118,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;默认正则说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;· 用于软件右边的“正则提取”模块&lt;/p&gt;&lt;p&gt;· 默认正则是日志行的正则，来源：&lt;a href=&quot;https://github.com/quisquous/cactbot/blob/main/docs/LogGuide.md#line-37-0x25-networkactionsync&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Cactbot Log Lines and Triggers&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;· 默认正则仅供查看，你无法增加和删除默认正则&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;默认正则说明：&lt;/span&gt;&lt;/p&gt;&lt;p&gt;· 用于软件右边的“正则提取”模块&lt;/p&gt;&lt;p&gt;· 默认正则是日志行的正则，来源：&lt;a href=&quot;https://github.com/quisquous/cactbot/blob/main/docs/LogGuide.md#line-37-0x25-networkactionsync&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Cactbot Log Lines and Triggers&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;· 默认正则只可编辑值，正则列表与键不可编辑&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -150,32 +153,6 @@
       <string>-</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_3">
-     <property name="geometry">
-      <rect>
-       <x>240</x>
-       <y>310</y>
-       <width>31</width>
-       <height>24</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>-</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="pushButton_4">
-     <property name="geometry">
-      <rect>
-       <x>210</x>
-       <y>310</y>
-       <width>31</width>
-       <height>24</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>+</string>
-     </property>
-    </widget>
     <widget class="QPushButton" name="pushButton_5">
      <property name="geometry">
       <rect>
@@ -195,12 +172,15 @@
      </property>
     </widget>
     <widget class="QTextEdit" name="textEdit">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>210</x>
-       <y>350</y>
+       <y>290</y>
        <width>691</width>
-       <height>91</height>
+       <height>151</height>
       </rect>
      </property>
     </widget>
