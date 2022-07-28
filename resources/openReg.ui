@@ -43,8 +43,11 @@
        <x>10</x>
        <y>30</y>
        <width>171</width>
-       <height>281</height>
+       <height>411</height>
       </rect>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::AllEditTriggers</set>
      </property>
     </widget>
     <widget class="QTableWidget" name="tableWidget">
@@ -56,6 +59,15 @@
        <height>281</height>
       </rect>
      </property>
+     <attribute name="horizontalHeaderCascadingSectionResizes">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="horizontalHeaderDefaultSectionSize">
+      <number>150</number>
+     </attribute>
+     <attribute name="horizontalHeaderHighlightSections">
+      <bool>true</bool>
+     </attribute>
      <column>
       <property name="text">
        <string>键</string>
@@ -96,10 +108,10 @@
     <widget class="QLabel" name="label_4">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>370</y>
+       <x>10</x>
+       <y>490</y>
        <width>611</width>
-       <height>161</height>
+       <height>121</height>
       </rect>
      </property>
      <property name="text">
@@ -116,7 +128,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>310</y>
+       <y>440</y>
        <width>31</width>
        <height>24</height>
       </rect>
@@ -129,7 +141,7 @@
      <property name="geometry">
       <rect>
        <x>40</x>
-       <y>310</y>
+       <y>440</y>
        <width>31</width>
        <height>24</height>
       </rect>
@@ -167,8 +179,8 @@
     <widget class="QPushButton" name="pushButton_5">
      <property name="geometry">
       <rect>
-       <x>790</x>
-       <y>330</y>
+       <x>720</x>
+       <y>470</y>
        <width>111</width>
        <height>31</height>
       </rect>
@@ -180,6 +192,16 @@
      </property>
      <property name="text">
       <string>保存</string>
+     </property>
+    </widget>
+    <widget class="QTextEdit" name="textEdit">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>350</y>
+       <width>691</width>
+       <height>91</height>
+      </rect>
      </property>
     </widget>
    </widget>

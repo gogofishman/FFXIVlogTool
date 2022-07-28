@@ -177,9 +177,14 @@ class RegWindow(QWidget):
         # 绑定控件对象
         self.default_list = self.ui.listWidget
         self.default_table = self.ui.tableWidget
+        self.default_text = self.ui.textEdit
 
-        # 默认正则表格
+        # 信号槽
+        self.default_list.itemClicked.connect(self.click_default_list)  # 默认正则列表被点击后更新属性表格
+        self.default_table.itemClicked.connect(self.click_default_table)  # 默认属性表格被点击后显示文本框
+        self.default_text.textChanged.connect(self.change_default_text)  # 默认文本框与属性表格同步
 
+        # 初始化运行
         self.update_default_list()
 
     def update_default_list(self):
@@ -191,11 +196,45 @@ class RegWindow(QWidget):
         self.default_table.setRowCount(row)
         self.default_table.verticalHeader().setVisible(False)
         self.default_table.setColumnWidth(0, 150)
-        self.default_table.setColumnWidth(1, 691-150)
+        self.default_table.setColumnWidth(1, 539)
 
-    def update_default_table(self):
-        """填充属性表格数据"""
+    def click_default_list(self):
+        """正则列表被点击"""
+        target = self.default_list.currentItem().text()
+        target = target[:target.find(' ')]  # target为选中的key
+        self.update_default_table(target)  # 被点击后刷新表格数据
 
+    def update_default_table(self, key):
+        """填充属性表格数据,key为日志行前缀"""
+        row = 0
+        for i in regular_library[key].keys():
+            item = QTableWidgetItem()
+            item2 = QTableWidgetItem()
+            item.setText(i)
+            item2.setText(str(regular_library[key][i]))
+            self.default_table.setItem(row, 0, item)
+            self.default_table.setItem(row, 1, item2)
+            row += 1
+
+    def click_default_table(self):
+        """默认属性表格被点击"""
+        text = self.default_table.currentItem().text()
+        self.default_text.setText(text)  # 输出到文本编辑框
+
+    def change_default_text(self):
+        """默认文本框与表格同步"""
+        text = self.default_text.document().toPlainText()  # 获取文本框文本内容
+        select_table_row = self.default_table.currentRow()
+        select_table_col = self.default_table.currentColumn()
+        item = QTableWidgetItem()
+        item.setText(text)
+        self.default_table.setItem(select_table_row, select_table_col, item)
+        # 随时更新regular_library
+        target = self.default_list.currentItem().text()
+        target = target[:target.find(' ')]
+        key = self.default_table.item(select_table_row, 0).text()
+        value = self.default_table.item(select_table_row, 1).text()
+        regular_library[target][key] = value
 
 
 def read_reg(path):
