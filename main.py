@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import *
 from PyQt6 import uic
 import sys
 import re
+import io
 
 default_reg_path = './data/RegularLibrary.txt'
 custom_reg_path = './data/CustomRegularLibrary.txt'
@@ -15,14 +16,17 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.text = io.StringIO()  # 文档内容
         self.ui = uic.loadUi("resources/main.ui")
         # 自定义变量
-        self.text = ""  # 文档内容
+
         self.reg = ""  # 当前匹配的正则表达式
 
         # 绑定控件对象
         self.b_open = self.ui.action1  # 菜单_打开按钮
+        self.b_open2 = self.ui.pushButton_3
         self.t_plainTextEdit = self.ui.plainTextEdit  # log文本编辑框
+        self.tree = self.ui.treeWidget  # 树形框
         self.b_font = self.ui.action2  # 菜单_字体设置按钮
         self.b_regbox = self.ui.action3  # 正则管理器按钮
         self.t_reg_group = self.ui.textEdit  # 正则匹配组编辑框
@@ -45,9 +49,13 @@ class MainWindow(QWidget):
         self.reginfo_translation.setFont(QFont("宋体", 11, ))
         self.reginfo_translation.setText("")
         self.ui.label_2.hide()
+        self.tree.setColumnHidden(1, True)  # 树形编辑框隐藏列和头
+        self.tree.setHeaderHidden(True)
 
         # 信号槽
+        self.tree.itemClicked.connect(self.get_tree_clicked)  # 树形编辑器被点击
         self.b_open.triggered.connect(self.openfile)  # 菜单_打开按钮
+        self.b_open2.clicked.connect(self.openfile)
         self.b_font.triggered.connect(self.changefont)  # 菜单_字体设置按钮
         self.t_plainTextEdit.cursorPositionChanged.connect(self.reg_def)  # 光标改变时正则匹配行
         self.t_plainTextEdit.cursorPositionChanged.connect(self.line_deep)  # 光标行字体背景颜色加深
@@ -80,9 +88,10 @@ class MainWindow(QWidget):
         if ok:
             self.t_plainTextEdit.clear()  # 清除所有
             file = open(file_names, encoding="utf-8")
-            self.text = file.read()  # text储存文本信息
-            self.t_plainTextEdit.setPlainText(self.text)
+            self.t_plainTextEdit.setPlainText(file.read())
+            self.text = io.StringIO(self.t_plainTextEdit.toPlainText())  # 将文本内容赋值到text
             file.close()
+            self.get_tree()
 
     def changefont(self):
         """字体设置"""
@@ -149,6 +158,9 @@ class MainWindow(QWidget):
                 match_keys = match.keys()
                 # translation模块转化为str
                 translation = regular['translation']
+                # 如果translation为字符串则转化为列表
+                if type(translation) == str:
+                    translation = eval(translation)
                 a = ['']
                 for i in translation:
                     if i != translation[0]:
@@ -168,6 +180,32 @@ class MainWindow(QWidget):
                         t_end = match[i]
                         t = t_head + t_mid + t_end
                         self.t_reg_group.append(t)
+
+    # 左侧树形分类框
+    def get_tree(self):
+        """打开文件时扫描一次，形成树形分类"""
+        log_type = self.text_type()  # 日志类型
+        # 扫描
+        map = []  # 地图
+        pos = 0  # 定位位置
+        for line in self.text:
+            if log_type == "网络日志":
+                # 找到改变地图的日志
+                if line[0:2] == "01":
+                    reg = regular_library['01']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    map_name = re.search(reg, line).groupdict()["name"]  # 地图名字
+                    map.append(QTreeWidgetItem(self.tree))
+                    map[-1].setText(0, map_name)
+                    map[-1].setText(1, str(self.text.tell()))
+        # 画树形框
+
+    # 属性编辑器被点击,快速定位到指定位置
+    def get_tree_clicked(self):
+        pass
+
+    # 属性编辑器被双击，截取指定内容
+    # pos = int(self.tree.currentItem().text(1))  # 获取位置指针
 
 
 class RegWindow(QWidget):
@@ -304,6 +342,10 @@ class RegWindow(QWidget):
         if ok:
             write_reg(default_reg_path, self.regularLibrary)
             self.default_list.clear()  # 清空列表
+            self.default_text.setEnabled(False)
+            self.isupdata = False
+            self.default_text.clear()
+            # 重新更新regularLibrary
             self.regularLibrary = read_reg(default_reg_path)
             self.update_default_list()
             global regular_library
@@ -324,11 +366,6 @@ def read_reg(path):
 
 def write_reg(path, reg_dict):
     """往reg的txt文件里写入一个字典"""
-    # translation设置为list格式
-    for key in regular_library:
-        if type(regular_library[key]['translation']) != list:
-            regular_library[key]['translation'] = eval(regular_library[key]['translation'])
-
     f = open(path, 'w')
     f.write(str(reg_dict))
     f.close()
