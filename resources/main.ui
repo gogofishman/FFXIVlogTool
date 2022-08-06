@@ -79,7 +79,7 @@
       <x>1430</x>
       <y>100</y>
       <width>311</width>
-      <height>31</height>
+      <height>33</height>
      </rect>
     </property>
     <property name="font">
@@ -322,6 +322,16 @@
     <column>
      <property name="text">
       <string>文本位置</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>新建列</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>2</string>
      </property>
     </column>
    </widget>

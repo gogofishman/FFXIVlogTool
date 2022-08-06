@@ -184,9 +184,11 @@ class MainWindow(QWidget):
     # 左侧树形分类框
     def get_tree(self):
         """打开文件时扫描一次，形成树形分类"""
+        self.tree.clear()
         log_type = self.text_type()  # 日志类型
         # 扫描
         map = []  # 地图
+        circulation = []  # 团灭或胜利
         pos = 0  # 定位位置
         for line in self.text:
             if log_type == "网络日志":
@@ -197,22 +199,62 @@ class MainWindow(QWidget):
                     map_name = re.search(reg, line).groupdict()["name"]  # 地图名字
                     map.append(QTreeWidgetItem(self.tree))
                     map[-1].setText(0, map_name)
-                    map[-1].setText(1, str(pos))
+                    map[-1].setText(1, str(self.text.tell()))
+                    map[-1].setText(2, str(pos))
+                # 找到团灭或胜利的日志
+                if line[0:2] == "33":
+                    reg = regular_library['33']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    code = re.search(reg, line).groupdict()["command"]
+                    if code == '40000010':
+                        circulation.append(QTreeWidgetItem(map[-1]))
+                        circulation[-1].setText(0, '团灭')
+                        circulation[-1].setText(1, str(self.text.tell()))
+                        circulation[-1].setText(2, str(pos))
+                    if code == '40000003':
+                        circulation.append(QTreeWidgetItem(map[-1]))
+                        circulation[-1].setText(0, '胜利')
+                        circulation[-1].setText(1, str(self.text.tell()))
+                        circulation[-1].setText(2, str(pos))
             pos += 1
         # 画树形框
 
     # 属性编辑器被点击,快速定位到指定位置
     def get_tree_clicked(self):
-        def move_cursor(num):
-            """光标移动多少行,向下为正，向上为负"""
+
+        def fold(start, end):
+            """折叠显示"""
+            start = int(start)
+            end = int(end)
+            doc = self.t_plainTextEdit.document()
+            QTextBlock(doc).setVisible(False)
+            '''num = doc.blockCount()  # 文本总行数
+            for i in range(0, start):
+                doc.findBlockByNumber(i).setVisible(False)
+            for i in range(end + 1, num):
+                doc.findBlockByNumber(i).setVisible(False)'''
+            self.t_plainTextEdit.viewport().update()
+            self.t_plainTextEdit.document().adjustSize()
+
+        def move_cursor(new_pos):
+            """移动光标到"""
             a = self.t_plainTextEdit.textCursor()
-            if num > 0:
-                a.movePosition(QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.MoveAnchor, num)
-            else:
-                a.movePosition(QTextCursor.MoveOperation.Up, QTextCursor.MoveMode.MoveAnchor, -num)
+            a.setPosition(int(new_pos))  # 快速定位到指定位置，但是会在下一行
+            a.movePosition(QTextCursor.MoveOperation.Up, QTextCursor.MoveMode.MoveAnchor, 1)  # 设置光标到指定行
+            a.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
             self.t_plainTextEdit.setTextCursor(a)
 
-        move_cursor(-2)
+        seek = int(self.tree.currentItem().text(1))  # 当前树选中的文本的位置
+        pos = int(self.tree.currentItem().text(2))  # 当前树选中的文本的行数
+        a = self.tree.itemAbove(self.tree.currentItem())
+        if a:
+            pos_before = int(a.text(2)) + 1
+        else:
+            pos_before = 0
+
+        if self.tree.currentItem().text(0) == "胜利" or self.tree.currentItem().text(0) == "团灭":
+            fold(pos_before, pos)
+        move_cursor(seek)
 
 
 class RegWindow(QWidget):
