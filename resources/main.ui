@@ -303,9 +303,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>10</y>
+      <y>40</y>
       <width>351</width>
-      <height>941</height>
+      <height>911</height>
      </rect>
     </property>
     <property name="whatsThis">
@@ -324,6 +324,26 @@
       <string>文本位置</string>
      </property>
     </column>
+   </widget>
+   <widget class="QComboBox" name="comboBox">
+    <property name="geometry">
+     <rect>
+      <x>207</x>
+      <y>10</y>
+      <width>151</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>按团灭分段显示文本</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>显示完整log文本</string>
+     </property>
+    </item>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

@@ -49,7 +49,7 @@ class MainWindow(QWidget):
         self.reginfo_translation.setFont(QFont("宋体", 11, ))
         self.reginfo_translation.setText("")
         self.ui.label_2.hide()
-        self.tree.setColumnHidden(1, True)  # 树形编辑框隐藏列和头
+        # self.tree.setColumnHidden(1, True)  # 树形编辑框隐藏列和头
         self.tree.setHeaderHidden(True)
 
         # 信号槽
@@ -197,15 +197,22 @@ class MainWindow(QWidget):
                     map_name = re.search(reg, line).groupdict()["name"]  # 地图名字
                     map.append(QTreeWidgetItem(self.tree))
                     map[-1].setText(0, map_name)
-                    map[-1].setText(1, str(self.text.tell()))
+                    map[-1].setText(1, str(pos))
+            pos += 1
         # 画树形框
 
     # 属性编辑器被点击,快速定位到指定位置
     def get_tree_clicked(self):
-        pass
+        def move_cursor(num):
+            """光标移动多少行,向下为正，向上为负"""
+            a = self.t_plainTextEdit.textCursor()
+            if num > 0:
+                a.movePosition(QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.MoveAnchor, num)
+            else:
+                a.movePosition(QTextCursor.MoveOperation.Up, QTextCursor.MoveMode.MoveAnchor, -num)
+            self.t_plainTextEdit.setTextCursor(a)
 
-    # 属性编辑器被双击，截取指定内容
-    # pos = int(self.tree.currentItem().text(1))  # 获取位置指针
+        move_cursor(-2)
 
 
 class RegWindow(QWidget):
