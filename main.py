@@ -17,6 +17,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.text = io.StringIO()  # 文档内容
+        self.text_section = []
         self.ui = uic.loadUi("resources/main.ui")
         # 自定义变量
 
@@ -90,6 +91,7 @@ class MainWindow(QWidget):
             file = open(file_names, encoding="utf-8")
             self.t_plainTextEdit.setPlainText(file.read())
             self.text = io.StringIO(self.t_plainTextEdit.toPlainText())  # 将文本内容赋值到text
+            self.text_section = []  # 分段文本初始化
             file.close()
             self.get_tree()
 
@@ -189,7 +191,9 @@ class MainWindow(QWidget):
         # 扫描
         map = []  # 地图
         circulation = []  # 团灭或胜利
+        ability = []  # 技能
         pos = 0  # 定位位置
+        text_section_pos = 0
         for line in self.text:
             if log_type == "网络日志":
                 # 找到改变地图的日志
@@ -199,8 +203,9 @@ class MainWindow(QWidget):
                     map_name = re.search(reg, line).groupdict()["name"]  # 地图名字
                     map.append(QTreeWidgetItem(self.tree))
                     map[-1].setText(0, map_name)
-                    map[-1].setText(1, str(self.text.tell()))
-                    map[-1].setText(2, str(pos))
+                    map[-1].setText(1, str(self.text.tell()))  # 记录当前文本光标位置
+                    map[-1].setText(2, str(pos))  # 记录当前行位置
+                    text_section_pos = self.text.tell() - len(line)  # 记录当前分段文本光标位置
                 # 找到团灭或胜利的日志
                 if line[0:2] == "33":
                     reg = regular_library['33']['regular']
@@ -211,13 +216,84 @@ class MainWindow(QWidget):
                         circulation[-1].setText(0, '团灭')
                         circulation[-1].setText(1, str(self.text.tell()))
                         circulation[-1].setText(2, str(pos))
+                        circulation[-1].setText(3, str(len(circulation) - 1))
+                        # 读取分段文本
+                        local_pos = self.text.tell()
+                        if local_pos > text_section_pos:
+                            self.text.seek(text_section_pos)
+                            iotext = self.text.read(local_pos - text_section_pos)
+                            self.text_section.append(iotext)
+                            self.text.seek(local_pos)
+                            text_section_pos = local_pos
+
                     if code == '40000003':
                         circulation.append(QTreeWidgetItem(map[-1]))
                         circulation[-1].setText(0, '胜利')
                         circulation[-1].setText(1, str(self.text.tell()))
                         circulation[-1].setText(2, str(pos))
+                        circulation[-1].setText(3, str(len(circulation) - 1))
+                        # 读取分段文本
+                        local_pos = self.text.tell()
+                        if local_pos > text_section_pos:
+                            self.text.seek(text_section_pos)
+                            iotext = self.text.read(local_pos - text_section_pos)
+                            self.text_section.append(iotext)
+                            self.text.seek(local_pos)
+                            text_section_pos = local_pos
             pos += 1
-        # 画树形框
+
+        party = []  # 记录小队列表id
+        boss = []  # 记录被攻击过的boss id列表（不可选中的不算）
+
+        # 循环遍历每一个团灭、胜利日志块的每一行
+        m = 0
+        for text in self.text_section:
+            # 记录小队列表
+            t = io.StringIO(text)
+            for line in t:
+                if line[0:2] == '11':
+                    party = []
+                    reg = regular_library['11']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    party_dict = re.search(reg, line).groupdict()
+                    party_num = len(party_dict) - 3
+                    for i in range(0, party_num - 1):
+                        l = party_dict['id' + str(i)]
+                        if l is not None:
+                            party.append(l)
+                    break  # 退出当前循环
+
+            # 记录当前日志块的BOSS
+            boss = []  # 清空boss列表
+            t = io.StringIO(text)
+            for line in t:
+                if line[0:2] == '21':
+                    reg = regular_library['21']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    _id = re.search(reg, line).groupdict()["id"]
+                    if _id == '07':  # 如果21行为攻击
+                        dic = re.search(reg, line).groupdict()
+                        sourceId = dic["sourceId"]
+                        targetId = dic["targetId"]
+
+                        if sourceId in party and targetId not in boss:
+                            boss.append(targetId)
+
+            t = io.StringIO(text)
+            for line in t:
+                # 找到boss放技能的日志
+                if line[0:2] == '20':
+                    reg = regular_library['20']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    dic = re.search(reg, line).groupdict()
+                    _ability = dic["ability"]
+                    sourceId = dic["sourceId"]
+                    if sourceId in boss:
+                        ability.append(QTreeWidgetItem(circulation[m]))
+                        ability[-1].setText(0, _ability)
+                        ability[-1].setText(1, '技能')
+                        ability[-1].setText(2, str(t.tell()))
+            m += 1
 
     # 属性编辑器被点击,快速定位到指定位置
     def get_tree_clicked(self):
@@ -244,17 +320,19 @@ class MainWindow(QWidget):
             a.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
             self.t_plainTextEdit.setTextCursor(a)
 
-        seek = int(self.tree.currentItem().text(1))  # 当前树选中的文本的位置
-        pos = int(self.tree.currentItem().text(2))  # 当前树选中的文本的行数
-        a = self.tree.itemAbove(self.tree.currentItem())
-        if a:
-            pos_before = int(a.text(2)) + 1
-        else:
-            pos_before = 0
+        text = self.tree.currentItem().text(0)  # 当前选中的文本
 
-        if self.tree.currentItem().text(0) == "胜利" or self.tree.currentItem().text(0) == "团灭":
-            fold(pos_before, pos)
-        move_cursor(seek)
+        # 如果点击的是“团灭”“胜利”，显示分段文本
+        if text == '团灭' or text == '胜利':
+            text_section_pos = int(self.tree.currentItem().text(3))
+            self.t_plainTextEdit.clear()
+            self.t_plainTextEdit.setPlainText(self.text_section[text_section_pos])
+
+        # 如果点的是具体技能，则快速移动到指定位置
+        if self.tree.currentItem().text(1) == '技能':
+            father = self.tree.currentItem().parent().text(3)  # 获取父节点
+            text_section_pos = int(self.tree.currentItem().text(2))
+            move_cursor(text_section_pos)
 
 
 class RegWindow(QWidget):
