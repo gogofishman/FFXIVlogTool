@@ -18,6 +18,9 @@ class MainWindow(QWidget):
         super().__init__()
         self.text = io.StringIO()  # 文档内容
         self.text_section = []
+        self.text_now = None
+        '''当前文本编辑框显示的区块\n
+        None为显示全部文本'''
         self.ui = uic.loadUi("resources/main.ui")
         # 自定义变量
 
@@ -50,7 +53,9 @@ class MainWindow(QWidget):
         self.reginfo_translation.setFont(QFont("宋体", 11, ))
         self.reginfo_translation.setText("")
         self.ui.label_2.hide()
-        # self.tree.setColumnHidden(1, True)  # 树形编辑框隐藏列和头
+        self.tree.setColumnHidden(1, True)  # 树形编辑框隐藏列和头
+        self.tree.setColumnHidden(2, True)
+        self.tree.setColumnHidden(3, True)
         self.tree.setHeaderHidden(True)
 
         # 信号槽
@@ -201,8 +206,9 @@ class MainWindow(QWidget):
                     reg = regular_library['01']['regular']
                     reg = reg.replace("(?<", "(?P<")
                     map_name = re.search(reg, line).groupdict()["name"]  # 地图名字
+                    time = '  -  '+re.search(reg, line).groupdict()["timestamp"][11:19]
                     map.append(QTreeWidgetItem(self.tree))
-                    map[-1].setText(0, map_name)
+                    map[-1].setText(0, map_name+time)
                     map[-1].setText(1, str(self.text.tell()))  # 记录当前文本光标位置
                     map[-1].setText(2, str(pos))  # 记录当前行位置
                     text_section_pos = self.text.tell() - len(line)  # 记录当前分段文本光标位置
@@ -211,9 +217,10 @@ class MainWindow(QWidget):
                     reg = regular_library['33']['regular']
                     reg = reg.replace("(?<", "(?P<")
                     code = re.search(reg, line).groupdict()["command"]
+                    time = '  -  ' + re.search(reg, line).groupdict()["timestamp"][11:19]
                     if code == '40000010':
                         circulation.append(QTreeWidgetItem(map[-1]))
-                        circulation[-1].setText(0, '团灭')
+                        circulation[-1].setText(0, '团灭'+time)
                         circulation[-1].setText(1, str(self.text.tell()))
                         circulation[-1].setText(2, str(pos))
                         circulation[-1].setText(3, str(len(circulation) - 1))
@@ -228,7 +235,7 @@ class MainWindow(QWidget):
 
                     if code == '40000003':
                         circulation.append(QTreeWidgetItem(map[-1]))
-                        circulation[-1].setText(0, '胜利')
+                        circulation[-1].setText(0, '胜利'+time)
                         circulation[-1].setText(1, str(self.text.tell()))
                         circulation[-1].setText(2, str(pos))
                         circulation[-1].setText(3, str(len(circulation) - 1))
@@ -288,9 +295,10 @@ class MainWindow(QWidget):
                     dic = re.search(reg, line).groupdict()
                     _ability = dic["ability"]
                     sourceId = dic["sourceId"]
+                    time = '  -  ' + dic["timestamp"][11:19]
                     if sourceId in boss:
                         ability.append(QTreeWidgetItem(circulation[m]))
-                        ability[-1].setText(0, _ability)
+                        ability[-1].setText(0, _ability+time)
                         ability[-1].setText(1, '技能')
                         ability[-1].setText(2, str(t.tell()))
             m += 1
@@ -327,12 +335,18 @@ class MainWindow(QWidget):
             text_section_pos = int(self.tree.currentItem().text(3))
             self.t_plainTextEdit.clear()
             self.t_plainTextEdit.setPlainText(self.text_section[text_section_pos])
+            self.text_now = text_section_pos  # 记录下当前文本显示的区块
 
         # 如果点的是具体技能，则快速移动到指定位置
         if self.tree.currentItem().text(1) == '技能':
-            father = self.tree.currentItem().parent().text(3)  # 获取父节点
+            father = int(self.tree.currentItem().parent().text(3))  # 获取父节点
+            # 如果当前选中技能不在文本编辑框的区块中，则切换显示文本
+            if father != self.text_now:
+                self.t_plainTextEdit.clear()
+                self.t_plainTextEdit.setPlainText(self.text_section[father])
+                self.text_now = father  # 记录下当前文本显示的区块
             text_section_pos = int(self.tree.currentItem().text(2))
-            move_cursor(text_section_pos)
+            move_cursor(text_section_pos)  # 移动光标
 
 
 class RegWindow(QWidget):
