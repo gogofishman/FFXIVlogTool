@@ -3,12 +3,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 from PyQt6 import uic
+import json
 import sys
 import re
 import io
 
-default_reg_path = './data/RegularLibrary.txt'
-custom_reg_path = './data/CustomRegularLibrary.txt'
+default_reg_path = './data/RegularLibrary.json'
+custom_reg_path = './data/CustomRegularLibrary.json'
 
 
 class MainWindow(QWidget):
@@ -496,34 +497,22 @@ class RegWindow(QWidget):
 def read_reg(path):
     """读取reg的txt文件,返回一个字典"""
     f = open(path, 'r')
-    data = f.read()
-    if data != "":
-        data2 = eval(data)
-    else:
-        data2 = {}
+    data = json.load(f)
     f.close()
-    return data2
+    return data
 
 
 def write_reg(path, reg_dict):
     """往reg的txt文件里写入一个字典"""
+    dict_json = regToText(reg_dict)
     f = open(path, 'w')
-    f.write(str(reg_dict))
+    f.write(dict_json)
     f.close()
 
 
 def regToText(library):
     """把正则字典转换成方便自己看的文本"""
-    text = ''
-    for key in library:
-        text = text + "'" + key + "'" + ' : {\n'
-        for key2 in library[key]:
-            if str(library[key][key2])[0] == '[':
-                text = text + '        ' + "'" + key2 + "' : " + str(library[key][key2]) + ",\n"
-            else:
-                text = text + '        ' + "'" + key2 + "' : '" + str(library[key][key2]) + "',\n"
-        text = text + "},\n"
-    return text
+    return json.dumps(library, sort_keys=False, indent=4, ensure_ascii=False,separators=(',', ': '))
 
 
 if __name__ == '__main__':
@@ -531,7 +520,7 @@ if __name__ == '__main__':
 
     # 第一次读取默认正则和自定义正则
     regular_library = read_reg(default_reg_path)
-    custom_regular_library = read_reg(custom_reg_path)
+    #custom_regular_library = read_reg(custom_reg_path)
 
     mainWindow = MainWindow()  # 主窗口
     regWindow = RegWindow()  # 正则管理器窗口
