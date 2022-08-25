@@ -10,6 +10,10 @@ import io
 
 default_reg_path = './data/RegularLibrary.json'
 custom_reg_path = './data/CustomRegularLibrary.json'
+data = []
+
+# 导入数据
+from data.gamedata import GameData
 
 
 class MainWindow(QWidget):
@@ -34,6 +38,7 @@ class MainWindow(QWidget):
         self.tree = self.ui.treeWidget  # 树形框
         self.b_font = self.ui.action2  # 菜单_字体设置按钮
         self.b_regbox = self.ui.action3  # 正则管理器按钮
+        self.b_gameData = self.ui.pushButton_5  # 游戏数据按钮
         self.t_reg_group = self.ui.textEdit  # 正则匹配组编辑框
         self.reginfo_type = self.ui.label_7
         self.reginfo_description = self.ui.label_6
@@ -207,9 +212,9 @@ class MainWindow(QWidget):
                     reg = regular_library['01']['regular']
                     reg = reg.replace("(?<", "(?P<")
                     map_name = re.search(reg, line).groupdict()["name"]  # 地图名字
-                    time = '  -  '+re.search(reg, line).groupdict()["timestamp"][11:19]
+                    time = '  -  ' + re.search(reg, line).groupdict()["timestamp"][11:19]
                     map.append(QTreeWidgetItem(self.tree))
-                    map[-1].setText(0, map_name+time)
+                    map[-1].setText(0, map_name + time)
                     map[-1].setText(1, str(self.text.tell()))  # 记录当前文本光标位置
                     map[-1].setText(2, str(pos))  # 记录当前行位置
                     text_section_pos = self.text.tell() - len(line)  # 记录当前分段文本光标位置
@@ -221,7 +226,7 @@ class MainWindow(QWidget):
                     time = '  -  ' + re.search(reg, line).groupdict()["timestamp"][11:19]
                     if code == '40000010':
                         circulation.append(QTreeWidgetItem(map[-1]))
-                        circulation[-1].setText(0, '团灭'+time)
+                        circulation[-1].setText(0, '团灭' + time)
                         circulation[-1].setText(1, str(self.text.tell()))
                         circulation[-1].setText(2, str(pos))
                         circulation[-1].setText(3, str(len(circulation) - 1))
@@ -236,7 +241,7 @@ class MainWindow(QWidget):
 
                     if code == '40000003':
                         circulation.append(QTreeWidgetItem(map[-1]))
-                        circulation[-1].setText(0, '胜利'+time)
+                        circulation[-1].setText(0, '胜利' + time)
                         circulation[-1].setText(1, str(self.text.tell()))
                         circulation[-1].setText(2, str(pos))
                         circulation[-1].setText(3, str(len(circulation) - 1))
@@ -250,12 +255,51 @@ class MainWindow(QWidget):
                             text_section_pos = local_pos
             pos += 1
 
+        global data
+        data = []  # 初始化
+
+        playerId = ''  # 记录玩家自己
         party = []  # 记录小队列表id
         boss = []  # 记录被攻击过的boss id列表（不可选中的不算）
 
         # 循环遍历每一个团灭、胜利日志块的每一行
         m = 0
         for text in self.text_section:
+            data.append(GameData())
+
+            # 记录所有实体(通过03行)
+            t = io.StringIO(text)
+            temp = []  # 用于记录已记录的id，防止重复记录
+            for line in t:
+                if line[0:2] == '03':
+                    reg = regular_library['03']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    dic = re.search(reg, line).groupdict()
+                    data[-1].combatant = {
+                        'id': dic['id'],
+                        'name': dic['name'],
+                        'worldId': dic['worldId'],
+                        'worldName': dic['world'],
+                        'jobId': str(int(dic['job'], 16)),
+                        'jobName': data[-1].getJob(str(int(dic['job'], 16))),
+                        'role': data[-1].getJob(str(int(dic['job'], 16)), 'role'),
+                        'MaxHp': dic['hp'],
+                        'ownerId': dic['ownerId']
+                    }
+                    if dic['id'] not in temp:
+                        data[-1].entity.append(data[-1].combatant)  # 记录到data数据中
+                    temp.append(dic['id'])
+
+            # 玩家自己
+            t = io.StringIO(text)
+            for line in t:
+                if line[0:2] == '02':
+                    reg = regular_library['02']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    dic = re.search(reg, line).groupdict()
+                    playerId = dic['id']
+                    break
+
             # 记录小队列表
             t = io.StringIO(text)
             for line in t:
@@ -270,6 +314,15 @@ class MainWindow(QWidget):
                         if l is not None:
                             party.append(l)
                     break  # 退出当前循环
+            # 小队、boss记录到data数据中
+            for i in data[-1].entity:
+                if i['id'] == playerId:
+                    data[-1].player = i  # 记录玩家自己
+                if i['id'] in party:
+                    data[-1].party.append(i)  # 记录小队
+                else:
+                    if int(i['ownerId'], 16) == 0:
+                        data[-1].boss.append(i)  # 记录敌对
 
             # 记录当前日志块的BOSS
             boss = []  # 清空boss列表
@@ -299,7 +352,7 @@ class MainWindow(QWidget):
                     time = '  -  ' + dic["timestamp"][11:19]
                     if sourceId in boss:
                         ability.append(QTreeWidgetItem(circulation[m]))
-                        ability[-1].setText(0, _ability+time)
+                        ability[-1].setText(0, _ability + time)
                         ability[-1].setText(1, '技能')
                         ability[-1].setText(2, str(t.tell()))
             m += 1
@@ -329,9 +382,8 @@ class MainWindow(QWidget):
             a.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
             self.t_plainTextEdit.setTextCursor(a)
 
-        text = self.tree.currentItem().text(0)  # 当前选中的文本
-
         # 如果点击的是“团灭”“胜利”，显示分段文本
+        text = self.tree.currentItem().text(0)[0:2]  # 当前选中的文本
         if text == '团灭' or text == '胜利':
             text_section_pos = int(self.tree.currentItem().text(3))
             self.t_plainTextEdit.clear()
@@ -494,6 +546,13 @@ class RegWindow(QWidget):
             regular_library = read_reg(default_reg_path)
 
 
+class GameDataWindow(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.ui = uic.loadUi("resources/gameData.ui")
+
+
 def read_reg(path):
     """读取reg的txt文件,返回一个字典"""
     f = open(path, 'r')
@@ -512,7 +571,7 @@ def write_reg(path, reg_dict):
 
 def regToText(library):
     """把正则字典转换成方便自己看的文本"""
-    return json.dumps(library, sort_keys=False, indent=4, ensure_ascii=False,separators=(',', ': '))
+    return json.dumps(library, sort_keys=False, indent=4, ensure_ascii=False, separators=(',', ': '))
 
 
 if __name__ == '__main__':
@@ -520,11 +579,13 @@ if __name__ == '__main__':
 
     # 第一次读取默认正则和自定义正则
     regular_library = read_reg(default_reg_path)
-    #custom_regular_library = read_reg(custom_reg_path)
+    # custom_regular_library = read_reg(custom_reg_path)
 
     mainWindow = MainWindow()  # 主窗口
     regWindow = RegWindow()  # 正则管理器窗口
+    gameDataWindow = GameDataWindow()  # 游戏数据窗口
     mainWindow.b_regbox.triggered.connect(regWindow.ui.show)  # 点击正则管理器按钮弹出窗口
+    mainWindow.b_gameData.clicked.connect(gameDataWindow.ui.show)  # 点击游戏数据按钮弹出窗口
 
     mainWindow.ui.show()
     app.exec()

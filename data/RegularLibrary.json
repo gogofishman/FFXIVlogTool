@@ -23,7 +23,7 @@
         "type": "02",
         "0xtype": "02",
         "name": "ChangePrimaryPlayer",
-        "description": "玩家（队友）发生变化",
+        "description": "玩家发生变化",
         "translation": "['【{0[1]}({0[2]})】玩家发生改变', 'name', 'id']"
     },
     "03": {
