@@ -57,6 +57,33 @@ class GameData:
         if _type == 'role':
             return jobs[_id][2]
 
+    def partyList(self, key: str = 'id'):
+        """
+        返回一个包含小队人员key信息的集合，key可选:
+            'id' \n
+            'name' \n
+            'worldId' \n
+            'worldName':\n
+            'jobId' \n
+            'jobName' \n
+            'role' \n
+            'MaxHp' \n
+        """
+        _list = []
+        for i in self.party:
+            if i[key] not in _list:
+                _list.append(i[key])
+        return _list
 
-    def partyNames(self):
-        """返回小队名字list"""
+    def bossList(self, key: str = 'id'):
+        """
+        返回一个包含所有敌方单位key信息的集合，key可选:
+            'id' \n
+            'name' \n
+            'MaxHp' \n
+        """
+        _list = []
+        for i in self.boss:
+            if i[key] not in _list:
+                _list.append(i[key])
+        return _list

@@ -7,6 +7,7 @@ import json
 import sys
 import re
 import io
+import math
 
 default_reg_path = './data/RegularLibrary.json'
 custom_reg_path = './data/CustomRegularLibrary.json'
@@ -205,6 +206,11 @@ class MainWindow(QWidget):
         ability = []  # 技能
         pos = 0  # 定位位置
         text_section_pos = 0
+
+        temp = ''
+        name_temp = []
+        timeEnd_temp = []
+
         for line in self.text:
             if log_type == "网络日志":
                 # 找到改变地图的日志
@@ -212,6 +218,7 @@ class MainWindow(QWidget):
                     reg = regular_library['01']['regular']
                     reg = reg.replace("(?<", "(?P<")
                     map_name = re.search(reg, line).groupdict()["name"]  # 地图名字
+                    temp = map_name
                     time = '  -  ' + re.search(reg, line).groupdict()["timestamp"][11:19]
                     map.append(QTreeWidgetItem(self.tree))
                     map[-1].setText(0, map_name + time)
@@ -222,9 +229,12 @@ class MainWindow(QWidget):
                 if line[0:2] == "33":
                     reg = regular_library['33']['regular']
                     reg = reg.replace("(?<", "(?P<")
-                    code = re.search(reg, line).groupdict()["command"]
-                    time = '  -  ' + re.search(reg, line).groupdict()["timestamp"][11:19]
+                    dic = re.search(reg, line).groupdict()
+                    code = dic["command"]
+                    time = '  -  ' + dic["timestamp"][11:19]
                     if code == '40000010':
+                        name_temp.append(temp)
+                        timeEnd_temp.append(time)
                         circulation.append(QTreeWidgetItem(map[-1]))
                         circulation[-1].setText(0, '团灭' + time)
                         circulation[-1].setText(1, str(self.text.tell()))
@@ -240,6 +250,8 @@ class MainWindow(QWidget):
                             text_section_pos = local_pos
 
                     if code == '40000003':
+                        name_temp.append(temp)
+                        timeEnd_temp.append(time)
                         circulation.append(QTreeWidgetItem(map[-1]))
                         circulation[-1].setText(0, '胜利' + time)
                         circulation[-1].setText(1, str(self.text.tell()))
@@ -257,15 +269,52 @@ class MainWindow(QWidget):
 
         global data
         data = []  # 初始化
-
         playerId = ''  # 记录玩家自己
         party = []  # 记录小队列表id
         boss = []  # 记录被攻击过的boss id列表（不可选中的不算）
 
         # 循环遍历每一个团灭、胜利日志块的每一行
         m = 0
+        k = 0
         for text in self.text_section:
             data.append(GameData())
+
+            # 记录所在副本名称
+            data[-1].duty = name_temp[m]
+
+            # 记录所在地图区域
+            t = io.StringIO(text)
+            for line in t:
+                if line[0:2] == '40':
+                    reg = regular_library['40']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    dic = re.search(reg, line).groupdict()
+                    data[-1].map = dic['regionName'] + ' - ' + dic['placeName']
+                    break
+            if data[-1].map == '':
+                # 如果没捕捉到40行就用上一个data数组的
+                data[-1].map = data[-2].map
+
+            # 记录时间相关
+            t = io.StringIO(text)
+            # 通过36行LB变化找到开怪时刻
+            line_num = 0
+            for line in t:
+                line_num += 1
+                if line[0:2] == '36':
+                    reg = regular_library['36']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    dic = re.search(reg, line).groupdict()
+                    data[-1].time_start = dic["timestamp"][11:19]  # 记录到data数据中
+                    # 增加开怪时刻的技能树
+                    ability.append(QTreeWidgetItem(circulation[m]))
+                    ability[-1].setText(0, '开怪 - 00:00:00')
+                    ability[-1].setText(1, '技能')
+                    ability[-1].setText(2, str(t.tell()))
+                    k = len(ability) - 1
+                    break
+            # 记录结束时刻
+            data[-1].time_end = timeEnd_temp[m]
 
             # 记录所有实体(通过03行)
             t = io.StringIO(text)
@@ -340,6 +389,32 @@ class MainWindow(QWidget):
                         if sourceId in party and targetId not in boss:
                             boss.append(targetId)
 
+            # 部分副本开怪时刻校正
+            t = io.StringIO(text)
+            line_num2 = 0
+            post1 = 0
+            n = ''
+            for line in t:
+                line_num2 += 1
+                if line_num2 >= line_num:
+                    break
+                if line[0:2] == '00':
+                    reg = regular_library['00']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    dic = re.search(reg, line).groupdict()
+                    if dic['code'] == '0044' and dic['name'] in data[-1].bossList('name'):
+                        post1 = line_num2
+                        n = dic['name']
+                        continue
+                if line[0:2] == '37' and post1 != 0:
+                    reg = regular_library['37']['regular']
+                    reg = reg.replace("(?<", "(?P<")
+                    dic = re.search(reg, line).groupdict()
+                    if dic['ObjectName'] == n and line_num2 - post1 == 1:
+                        data[-1].time_start = dic["timestamp"][11:19]  # 记录到data数据中
+                        ability[-1].setText(2, str(t.tell()))
+                        break
+
             t = io.StringIO(text)
             for line in t:
                 # 找到boss放技能的日志
@@ -349,12 +424,29 @@ class MainWindow(QWidget):
                     dic = re.search(reg, line).groupdict()
                     _ability = dic["ability"]
                     sourceId = dic["sourceId"]
-                    time = '  -  ' + dic["timestamp"][11:19]
+                    time = timeFormat(dic["timestamp"][11:19]) - timeFormat(data[-1].time_start)
+                    time = ' - ' + timeFormat(time, 1)
                     if sourceId in boss:
                         ability.append(QTreeWidgetItem(circulation[m]))
                         ability[-1].setText(0, _ability + time)
                         ability[-1].setText(1, '技能')
                         ability[-1].setText(2, str(t.tell()))
+
+            # 优化技能时间显示，增加空格让时间对齐
+            _max = 0
+            for i in range(k, len(ability)):  # 求标签名长度的最大值
+                text = ability[i].text(0)  # 获取标签名
+                _list = text.split(' - ')
+                if len(_list[0].encode('utf-8')) > _max:
+                    _max = len(_list[0].encode('utf-8'))
+            for i in range(k, len(ability)):  # 挨个增加空格
+                text = ability[i].text(0)  # 获取标签名
+                _list = text.split(' - ')
+                if len(_list[0].encode('utf-8')) < _max:
+                    _list[0] = _list[0] + ' ' * (_max - len(_list[0].encode('utf-8')))
+                    text = _list[0] + ' - ' + _list[1]
+                    ability[i].setText(0, text)
+
             m += 1
 
     # 属性编辑器被点击,快速定位到指定位置
@@ -572,6 +664,26 @@ def write_reg(path, reg_dict):
 def regToText(library):
     """把正则字典转换成方便自己看的文本"""
     return json.dumps(library, sort_keys=False, indent=4, ensure_ascii=False, separators=(',', ': '))
+
+
+def timeFormat(time, type: int = 0):
+    """时间格式化处理(type值)\n
+    0 - xx:xx:xx格式转化成纯秒int格式\n
+    1 - 纯秒int格式转化成xx:xx:xx格式\n
+    """
+    if type == 0:
+        list_temp = time.split(':')
+        return (int(list_temp[0]) * 60 + int(list_temp[1])) * 60 + int(list_temp[2])
+    if type == 1:
+        time = int(time)
+        a = []
+        a.append(str(math.floor(time / 3600)))
+        a.append(str(math.floor(time % 3600 / 60)))
+        a.append(str((time % 3600) % 60))
+        for i in range(0, len(a)):
+            if len(a[i]) == 1:
+                a[i] = '0' + a[i]
+        return str(a[0]) + ':' + str(a[1]) + ':' + str(a[2])
 
 
 if __name__ == '__main__':

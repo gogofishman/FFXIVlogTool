@@ -230,5 +230,32 @@
         "name": "Actor Control",
         "description": "游戏控制类",
         "translation": "['待做']"
+    },
+    "36": {
+        "regular": "^(?<type>36)\\|(?<timestamp>[^|]*)\\|(?<valueHex>[^|]*)\\|(?<bars>[^|]*)\\|",
+        "0xregular": "(?<timestamp>^.{14}) LimitBreak (?<type>24):(?<valueHex>[^:]*):(?<bars>[^:]{1})",
+        "type": "36",
+        "0xtype": "24",
+        "name": "LimitBreak",
+        "description": "极限技变化",
+        "translation": "['待做']"
+    },
+    "37": {
+        "regular": "^(?<type>37)\\|(?<timestamp>[^|]*)\\|(?<ObjectId>[^|]*)\\|(?<ObjectName>[^|]*)\\|",
+        "0xregular": "",
+        "type": "37",
+        "0xtype": "25",
+        "name": "ActionSync",
+        "description": "操作同步",
+        "translation": "['待做']"
+    },
+    "40": {
+        "regular": "^(?<type>40)\\|(?<timestamp>[^|]*)\\|(?<id>[^|]*)\\|(?<regionName>[^|]*)\\|(?<placeName>[^|]*)\\|(?<placeNameSub>[^|]*)\\|",
+        "0xregular": "(?<timestamp>^.{14}) ChangeMap (?<type>28):(?<id>[^:]*):(?<regionName>[^:]*):(?<placeName>[^:]*):(?<placeNameSub>[^:]*)(?:$|:)",
+        "type": "40",
+        "0xtype": "28",
+        "name": "Map",
+        "description": "地图区域切换",
+        "translation": "['待做']"
     }
 }
