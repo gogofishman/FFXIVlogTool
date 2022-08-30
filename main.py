@@ -230,7 +230,7 @@ class MainWindow(QWidget):
                     dic = re.search(reg, line).groupdict()
                     code = dic["command"]
                     time = '  -  ' + dic["timestamp"][11:19]
-                    if code == '40000010':
+                    if code == '40000006' :
                         name_temp.append(temp)
                         timeEnd_temp.append(time)
                         circulation.append(QTreeWidgetItem(map[-1]))
@@ -492,18 +492,15 @@ class MainWindow(QWidget):
             move_cursor(text_section_pos)  # 移动光标
 
 
-# 打开过滤器子窗口
-def open_filterWindow():
-    global filterWindow
-    from resources.py.filterWindow import FilterWindow
-    filterWindow = FilterWindow(mainWindow, regular_library, data)  # 过滤器窗口
-    filterWindow.ui.show()
+class FilterWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.ui = uic.loadUi("resources/ui/filter.ui")
 
 
 # 打开游戏数据子窗口
 def open_gameDataWindow():
     global gameDataWindow
-    from resources.py.gameDataWindow import GameDataWindow
     gameDataWindow = GameDataWindow()  # 游戏数据窗口
     gameDataWindow.ui.show()
 
@@ -538,12 +535,13 @@ if __name__ == '__main__':
 
     # 定义或声明窗口对象
     mainWindow = MainWindow()  # 定义主窗口对象
-    filterWindow = None  # 提前声明过滤器窗口对象,直到点击打开按钮才定义该对象
-    gameDataWindow = None  # 提前声明游戏数据窗口对象,直到点击打开按钮才定义该对象
+    filterWindow = FilterWindow()  # 定义过滤窗口对象
+    from resources.py.gameDataWindow import GameDataWindow
+    gameDataWindow = None  # 提前声明游戏数据窗口对象,直到点击打开按钮才定义该对象(使得每次打开窗口重新获取最新数据)
 
     # 绑定窗口打开的按钮事件
     mainWindow.b_gameData.clicked.connect(open_gameDataWindow)  # 点击游戏数据按钮弹出窗口
-    mainWindow.b_filter.clicked.connect(open_filterWindow)  # 点击过滤器按钮弹出子窗口
+    mainWindow.b_filter.clicked.connect(filterWindow.ui.show)  # 点击过滤器按钮弹出子窗口
 
     # 主窗口运行
     mainWindow.ui.show()
